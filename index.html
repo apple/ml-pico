@@ -1,0 +1,362 @@
+<!--
+For licensing see accompanying LICENSE file.
+Copyright (C) 2026 Apple Inc. All Rights Reserved.
+-->
+
+<!DOCTYPE html>
+<html lang="en-US">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="What Matters in Practical Learned Image Compression">
+
+    <title>What Matters in Practical Learned Image Compression</title>
+
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+
+<body>
+    <header>
+        <div class="container fade-in">
+            <h1>What Matters in Practical<br>Learned Image Compression</h1>
+            <nav>
+                <ul class="links">
+                    <li>
+                        <img src="assets/arxiv-icon.svg" style="width: 15px;" />
+                        <a href="#" target="_blank">arXiv</a>
+                    </li>
+                    <li>
+                        <img src="assets/reconstructions-icon.svg" style="width: 15px;" />
+                        <a href="https://ml-site.cdn-apple.com/datasets/lic/pico.zip">Data</a>
+                    </li>
+                    <li>
+                        <img src="assets/github-icon.svg" style="width: 15px;" />
+                        <a href="#citation">BibTeX</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+
+    <section class="sub-header fade-in">
+        <div class="container">
+            <nav>
+                <ul class="links">
+                    <li>Kedar Tatwawadi</li>
+                    <li>Parisa Rahimzadeh</li>
+                    <li>Zhanghao Sun</li>
+                    <li>Zhiqi Chen</li>
+                    <li>Ziyun Yang</li>
+                    <li>Sanjay Nair</li>
+                </ul>
+                <ul class="links">
+                    <li>Divija Hasteer</li>
+                    <li><a href="mailto:oren.rippel@apple.com">Oren Rippel</a></li>
+                </ul>
+            </nav>
+            <div style="margin-top: 10px;">
+                <p>Apple</p>
+            </div>
+        </div>
+    </section>
+
+    <main>
+        <div class="container fade-in" style="padding-top: 20px;">
+            <h2><a href="index.html#about" id="about">About</a></h2>
+            <p>
+                We introduce PICO (Perceptual Image Codec) — the first learned codec that is both practical, and optimized directly for the human visual system. To derive it, we perform a comprehensive study of modeling choices for practical learned codecs, and search over millions of model configurations to jointly optimize over perceptual quality and on-device runtime.
+            </p>
+            <p>
+                Based on large-scale subjective user studies, PICO provides <strong>2.3-3× bitrate savings</strong> against AV1, AV2, VVC, ECM and JPEG-AI, and <strong>20-40% bitrate savings</strong> against the best learned codec alternatives. At the same time, on an iPhone 17 Pro Max, it encodes 12MP images as fast as <strong>230ms</strong>, and decodes them in <strong>150ms</strong> — faster than most top ML-based codecs run on a V100 GPU. Different from most learned codecs, PICO furthermore comes with cross-platform robustness guarantees.
+            </p>
+
+            <!-- Scene Thumbnails -->
+            <div class="image-selector">
+                <div id="scene-thumbnails" style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px;"></div>
+            </div>
+
+            <!-- Comparison Slider Container -->
+            <div class="comparison-slider-wrapper outlined">
+                <!-- Main Slider -->
+                <div class="comparison-slider noselect">
+                    <div id="right-imgs">
+                        <img id="comparison-right-img" alt="Right comparison" style="width: 100%; height: auto; display: block;">
+                    </div>
+                    <div class="resize" id="left-img">
+                        <img id="comparison-left-img" alt="Left comparison" style="display: block;">
+                    </div>
+                    <div class="left-selector">
+                        <div class="btn-group-vertical">
+                            <button type="button" class="btn btn-sm btn-dark disabled-button highlighted" disabled><span>PICO (Ours)</span></button>
+                        </div>
+                    </div>
+                    <div class="right-selector">
+                        <div class="btn-group-vertical" id="right-method-tabs">
+                            <!-- Method tabs will be generated here by JS -->
+                        </div>
+                    </div>
+                    <div class="loading-spinner" id="loading-spinner">
+                        <div class="spinner"></div>
+                    </div>
+                    <div class="divider"></div>
+                </div>
+            </div>
+
+            <figcaption style="text-align: center; margin-top: 15px; color: #666; font-size: 0.9em; font-style: italic;">
+                Interactive comparison across different images. PICO (Ours) is fixed on the left. Select an image and comparison method from the overlay buttons, then drag the slider to compare.
+            </figcaption>
+
+            <style>
+                .noselect {
+                    -webkit-touch-callout: none;
+                    -webkit-user-select: none;
+                    -moz-user-select: none;
+                    -ms-user-select: none;
+                    user-select: none;
+                }
+                .outlined {
+                    position: relative;
+                    width: 100%;
+                    max-width: 100%;
+                    margin: 10px auto;
+                    background-color: white;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+                    border-radius: 16px;
+                    overflow: hidden;
+                }
+                .comparison-slider-wrapper .comparison-slider {
+                    position: relative;
+                    width: 100%;
+                    margin: 0;
+                    border: 5px white solid;
+                    box-sizing: border-box;
+                    cursor: grab;
+                    overflow: hidden;
+                }
+                .comparison-slider-wrapper .comparison-slider.panning {
+                    cursor: grabbing;
+                }
+                .comparison-slider-wrapper .comparison-slider #right-imgs {
+                    width: 100%;
+                    height: 100%;
+                }
+                .comparison-slider-wrapper .comparison-slider #right-imgs > img {
+                    display: block;
+                    transform-origin: 0 0;
+                    will-change: transform;
+                }
+                .comparison-slider-wrapper .comparison-slider .resize {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    height: 100%;
+                    width: 50%;
+                    overflow: hidden;
+                }
+                .comparison-slider-wrapper .comparison-slider .resize > img {
+                    display: block;
+                    transform-origin: 0 0;
+                    will-change: transform;
+                }
+                .comparison-slider-wrapper .comparison-slider .divider {
+                    position: absolute;
+                    width: 3px;
+                    height: 100%;
+                    background-color: rgba(255, 255, 255, 0.9);
+                    left: 50%;
+                    top: 0;
+                    bottom: 0;
+                    margin-left: -1.5px;
+                    cursor: ew-resize;
+                    z-index: 20;
+                    box-shadow: 0 0 8px rgba(0,0,0,0.1);
+                }
+                .comparison-slider-wrapper .comparison-slider .divider:before {
+                    content: "";
+                    position: absolute;
+                    width: 36px;
+                    height: 36px;
+                    left: -16.5px;
+                    top: 50%;
+                    margin-top: -18px;
+                    background: white;
+                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'%3E%3Cpath d='M12 18 L7 23 L7 13 Z M24 18 L29 13 L29 23 Z' fill='%231d1d1f'/%3E%3C/svg%3E");
+                    background-repeat: no-repeat;
+                    background-position: center center;
+                    border-radius: 50%;
+                    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+                    transition: all 0.2s ease;
+                }
+                .comparison-slider-wrapper .comparison-slider .divider:hover:before {
+                    transform: scale(1.1);
+                    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+                }
+                .left-selector {
+                    position: absolute;
+                    top: 10px;
+                    left: 10px;
+                    z-index: 30;
+                    pointer-events: none;
+                }
+                .right-selector {
+                    position: absolute;
+                    top: 10px;
+                    right: 10px;
+                    z-index: 30;
+                }
+                .btn-group-vertical {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                    pointer-events: auto;
+                }
+                .btn {
+                    padding: 8px 16px;
+                    border: 2px solid transparent;
+                    border-radius: 8px;
+                    font-size: 13px;
+                    cursor: pointer;
+                    text-align: center;
+                    white-space: pre-line;
+                    transition: all 0.2s ease;
+                    min-width: 110px;
+                    line-height: 1.3;
+                }
+                .btn-dark {
+                    background-color: #343a40;
+                    color: white;
+                }
+                .btn-light {
+                    background-color: #f8f9fa;
+                    color: #333;
+                }
+                .btn.disabled-button:disabled {
+                    background-color: #171a1d;
+                    opacity: 100%;
+                    cursor: default;
+                }
+                .btn.disabled-button.highlighted:disabled {
+                    border: 2px white solid;
+                }
+                .method-tab {
+                    padding: 8px 16px;
+                    background: #f5f5f7;
+                    border: 2px solid transparent;
+                    cursor: pointer;
+                    font-size: 13px;
+                    transition: all 0.2s ease;
+                    color: #1d1d1f;
+                    text-align: center;
+                    border-radius: 8px;
+                    min-width: 110px;
+                    white-space: pre-line;
+                    line-height: 1.3;
+                }
+                .method-tab:hover {
+                    background: #e8e8ed;
+                    transform: translateY(-1px);
+                    border: 2px solid transparent;
+                }
+                .method-tab.reference-tab {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    border: 2px solid transparent;
+                }
+                .method-tab.reference-tab:hover {
+                    background: linear-gradient(135deg, #5568d3 0%, #65408b 100%);
+                    transform: translateY(-1px);
+                    border: 2px solid transparent;
+                }
+                .method-tab.active {
+                    background: #1d1d1f;
+                    color: white;
+                    font-weight: 500;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+                    border: 2px solid white;
+                }
+                .method-tab.reference-tab.active {
+                    background: linear-gradient(135deg, #4a5dc7 0%, #553979 100%);
+                    color: white;
+                    box-shadow: 0 2px 12px rgba(102, 126, 234, 0.4);
+                    border: 2px solid white;
+                }
+                .method-tab.active:hover {
+                    border: 2px solid white;
+                }
+                .scene-thumb {
+                    cursor: pointer;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    border: 3px solid transparent;
+                    transition: all 0.2s ease;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    width: 70px;
+                    height: 70px;
+                    flex-shrink: 0;
+                }
+                .scene-thumb:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                }
+                .scene-thumb.thumb-active {
+                    border-color: #667eea;
+                    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+                }
+                .scene-thumb img {
+                    display: block;
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                }
+                .comparison-slider.zoomed {
+                    cursor: move;
+                    overflow: hidden;
+                }
+                #comparison-left-img,
+                #comparison-right-img {
+                    transition: none;
+                    transform-origin: 0 0;
+                }
+            </style>
+        </div>
+
+        <div class="container fade-in">
+            <p style="text-align: center; margin-bottom: 10px; color: #333; font-size: 1.05em; font-weight: 500;">
+                Comparisons of state-of-the-art traditional and learned codecs across different considerations of practicality.
+            </p>
+
+            <img src="assets/spotlight_figure.png" style="width: 100%; max-width: 550px; height: auto; display: block; margin: 10px auto;" alt="Performance comparison of PICO against traditional and learned codecs" />
+            <figcaption style="text-align: center; margin-top: 10px; color: #666; font-size: 0.95em;">
+                Comparisons of state-of-the-art traditional and learned codecs. Perceptual BD-rates are based on human ratings from a large-scale subjective study. Speed benchmarks on iPhone 17 Pro Max use identical compiler optimizations.
+            </figcaption>
+        </div>
+
+        <div class="container fade-in">
+            <h2><a href="index.html#citation" id="citation">Citation</a></h2>
+            <p>If you find our work useful, please cite:</p>
+            <pre style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto;">
+@article{tatwawadi2026pico,
+  title={What Matters in Practical Learned Image Compression},
+  author={Tatwawadi, Kedar and Rahimzadeh, Parisa and Sun, Zhanghao and Chen, Zhiqi and Yang, Ziyun and Nair, Sanjay and Hasteer, Divija and Rippel, Oren},
+  journal={arXiv preprint arXiv:XXXX.XXXXX},
+  year={2026}
+}</pre>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <copy>
+                Copyright © <span class="footer-year"></span> Apple Inc. All rights reserved.
+            </copy>
+        </div>
+    </footer>
+
+    <script src="assets/script.js" defer></script>
+    <script src="assets/comparison-slider.js" defer></script>
+</body>
+
+</html>

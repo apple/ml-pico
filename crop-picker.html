@@ -1,0 +1,296 @@
+<!--
+For licensing see accompanying LICENSE file.
+Copyright (C) 2026 Apple Inc. All Rights Reserved.
+-->
+
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crop Position Picker</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <style>
+        body {
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .crop-picker-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .scene-selector {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+
+        .scene-selector label {
+            font-weight: bold;
+        }
+
+        #scene-select {
+            padding: 8px 12px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            min-width: 300px;
+        }
+
+        .scene-selector button {
+            padding: 8px 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .scene-selector button:hover {
+            background: #0056b3;
+        }
+
+        .viewer-container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .crop-viewer {
+            position: relative;
+            width: 100%;
+            height: 600px;
+            border: 2px solid #333;
+            overflow: hidden;
+            cursor: grab;
+            background: #eee;
+        }
+
+        .crop-viewer:active {
+            cursor: grabbing;
+        }
+
+        #crop-viewer-img {
+            position: absolute;
+            display: block;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+
+        .crosshairs {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 3px dashed rgba(255, 0, 0, 0.5);
+            pointer-events: none;
+            box-sizing: border-box;
+        }
+
+        .position-info {
+            text-align: center;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            font-family: monospace;
+        }
+
+        .position-info p {
+            margin: 8px 0;
+            font-size: 16px;
+        }
+
+        .position-info span {
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .controls button {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        #save-position {
+            background: #28a745;
+            color: white;
+        }
+
+        #save-position:hover {
+            background: #218838;
+        }
+
+        #reset-center {
+            background: #6c757d;
+            color: white;
+        }
+
+        #reset-center:hover {
+            background: #5a6268;
+        }
+
+        #export-positions {
+            background: #17a2b8;
+            color: white;
+        }
+
+        #export-positions:hover {
+            background: #138496;
+        }
+
+        .saved-positions {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .saved-positions h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+
+        #positions-output {
+            background: #fff;
+            border: 1px solid #ccc;
+            padding: 15px;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        #copy-positions {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        #copy-positions:hover {
+            background: #0056b3;
+        }
+
+        .status-bar {
+            text-align: center;
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .instructions h3 {
+            margin-top: 0;
+            color: #856404;
+        }
+
+        .instructions ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .instructions li {
+            margin: 5px 0;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="crop-picker-container">
+        <h1>🎯 Crop Position Picker</h1>
+
+        <div class="instructions">
+            <h3>Instructions:</h3>
+            <ul>
+                <li><strong>Click and drag</strong> on the image to pan around</li>
+                <li>Use <strong>arrow keys</strong> for fine adjustments</li>
+                <li>Click <strong>"Save Position"</strong> to record the current crop</li>
+                <li>Navigate through all scenes and set their positions</li>
+                <li>Click <strong>"Export All Positions"</strong> when done</li>
+                <li>Copy the output and paste into <code>comparison-slider.js</code></li>
+            </ul>
+        </div>
+
+        <div class="status-bar">
+            <span id="status-text">Select a scene to begin</span>
+        </div>
+
+        <!-- Scene Selector -->
+        <div class="scene-selector">
+            <button id="prev-scene">← Prev</button>
+            <label for="scene-select">Scene:</label>
+            <select id="scene-select"></select>
+            <button id="next-scene">Next →</button>
+        </div>
+
+        <!-- Viewer -->
+        <div class="viewer-container">
+            <div class="crop-viewer" id="crop-viewer">
+                <img id="crop-viewer-img" alt="Scene image" />
+                <div class="crosshairs"></div>
+            </div>
+        </div>
+
+        <!-- Position Info -->
+        <div class="position-info">
+            <p>Current Position: <span id="current-x">50</span>%, <span id="current-y">50</span>%</p>
+            <p>Pan Pixels: <span id="pixel-x">0</span>px, <span id="pixel-y">0</span>px</p>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <button id="save-position">💾 Save Position</button>
+            <button id="reset-center">🎯 Reset to Center</button>
+            <button id="export-positions">📋 Export All Positions</button>
+        </div>
+
+        <!-- Saved Positions Display -->
+        <div class="saved-positions">
+            <h3>Saved Positions (<span id="saved-count">0</span>/10):</h3>
+            <pre id="positions-output">// No positions saved yet</pre>
+            <button id="copy-positions">📋 Copy to Clipboard</button>
+        </div>
+    </div>
+
+    <script src="assets/crop-picker.js"></script>
+</body>
+</html>

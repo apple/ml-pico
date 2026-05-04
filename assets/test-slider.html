@@ -1,0 +1,308 @@
+<!--
+For licensing see accompanying LICENSE file.
+Copyright (C) 2026 Apple Inc. All Rights Reserved.
+-->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Comparison Slider Tests</title>
+    <style>
+        body { font-family: monospace; margin: 20px; }
+        .pass { color: green; }
+        .fail { color: red; font-weight: bold; }
+        .section { margin-top: 20px; font-weight: bold; font-size: 1.1em; }
+        .summary { margin-top: 30px; font-size: 1.2em; padding: 10px; border: 2px solid; }
+        .summary.all-pass { border-color: green; color: green; }
+        .summary.has-fail { border-color: red; color: red; }
+    </style>
+</head>
+<body>
+<h1>Comparison Slider Unit Tests</h1>
+<div id="results"></div>
+
+<script>
+// Import just the pure functions we need to test
+const calcCenter = function(imageWidth, imageHeight, containerWidth, containerHeight) {
+    return {
+        x: (imageWidth - containerWidth) / 2,
+        y: (imageHeight - containerHeight) / 2
+    };
+};
+
+const calcMaxPan = function(imageWidth, imageHeight, containerWidth, containerHeight) {
+    return {
+        x: Math.max(imageWidth - containerWidth, 0),
+        y: Math.max(imageHeight - containerHeight, 0)
+    };
+};
+
+let passed = 0;
+let failed = 0;
+const results = document.getElementById('results');
+
+function assert(testName, condition, detail) {
+    const div = document.createElement('div');
+    if (condition) {
+        div.className = 'pass';
+        div.textContent = `PASS: ${testName}`;
+        passed++;
+    } else {
+        div.className = 'fail';
+        div.textContent = `FAIL: ${testName} -- ${detail || ''}`;
+        failed++;
+    }
+    results.appendChild(div);
+}
+
+function assertClose(testName, actual, expected, tolerance) {
+    tolerance = tolerance || 0.01;
+    const ok = Math.abs(actual - expected) < tolerance;
+    assert(testName, ok, `expected ${expected}, got ${actual}`);
+}
+
+function section(name) {
+    const div = document.createElement('div');
+    div.className = 'section';
+    div.textContent = `--- ${name} ---`;
+    results.appendChild(div);
+}
+
+// ========== calcCenter tests ==========
+
+section('calcCenter: basic centering');
+
+(function() {
+    // 3x zoom: image is 3x container
+    const c = calcCenter(3000, 2000, 1000, 667);
+    assertClose('3x zoom horizontal center', c.x, 1000);
+    assertClose('3x zoom vertical center', c.y, 666.5);
+})();
+
+(function() {
+    // Image same size as container -> center at 0,0
+    const c = calcCenter(1000, 500, 1000, 500);
+    assertClose('same size -> center x = 0', c.x, 0);
+    assertClose('same size -> center y = 0', c.y, 0);
+})();
+
+section('calcCenter: different aspect ratios with fixed container');
+
+(function() {
+    // Fixed container: 1000x534 (from first image AR 0.667)
+    // Tall image: 1920x1440, at 3x: 3000x2250
+    const cTall = calcCenter(3000, 2250, 1000, 534);
+    assertClose('tall image center x', cTall.x, 1000);
+    assertClose('tall image center y', cTall.y, 858);
+
+    // Wide image: 1920x960, at 3x: 3000x1500
+    const cWide = calcCenter(3000, 1500, 1000, 534);
+    assertClose('wide image center x', cWide.x, 1000);
+    assertClose('wide image center y', cWide.y, 483);
+
+    // Key assertion: tall image has larger panY than wide image
+    assert('tall image panY > wide image panY', cTall.y > cWide.y,
+        `tall=${cTall.y}, wide=${cWide.y}`);
+})();
+
+(function() {
+    // BUG REGRESSION: the old code used panY = fixedContainerHeight for ALL images
+    // With fixed container height 534, old code always set panY = 534
+    // For a tall image (AR 0.75), correct panY should be ~858, not 534
+    const fixedContainerHeight = 534;
+    const containerWidth = 1000;
+
+    // Tall image (AR 0.75)
+    const imageHeight = containerWidth * 3 * 0.75; // 2250
+    const center = calcCenter(containerWidth * 3, imageHeight, containerWidth, fixedContainerHeight);
+
+    assert('REGRESSION: tall image panY != fixedContainerHeight',
+        Math.abs(center.y - fixedContainerHeight) > 100,
+        `panY=${center.y}, fixedH=${fixedContainerHeight}`);
+})();
+
+(function() {
+    // BUG REGRESSION: wide image should have panY < fixedContainerHeight
+    const fixedContainerHeight = 534;
+    const containerWidth = 1000;
+
+    // Wide image (AR 0.5)
+    const imageHeight = containerWidth * 3 * 0.5; // 1500
+    const center = calcCenter(containerWidth * 3, imageHeight, containerWidth, fixedContainerHeight);
+
+    assert('REGRESSION: wide image panY < fixedContainerHeight',
+        center.y < fixedContainerHeight,
+        `panY=${center.y}, fixedH=${fixedContainerHeight}`);
+})();
+
+// ========== calcMaxPan tests ==========
+
+section('calcMaxPan: basic constraints');
+
+(function() {
+    // 3x zoom: maxPan = 2x container
+    const m = calcMaxPan(3000, 2000, 1000, 667);
+    assertClose('3x zoom maxPanX', m.x, 2000);
+    assertClose('3x zoom maxPanY', m.y, 1333);
+})();
+
+(function() {
+    // Image same size as container -> no pan
+    const m = calcMaxPan(1000, 500, 1000, 500);
+    assertClose('same size -> maxPanX = 0', m.x, 0);
+    assertClose('same size -> maxPanY = 0', m.y, 0);
+})();
+
+(function() {
+    // Image smaller than container -> clamped to 0
+    const m = calcMaxPan(500, 300, 1000, 500);
+    assertClose('smaller image -> maxPanX = 0', m.x, 0);
+    assertClose('smaller image -> maxPanY = 0', m.y, 0);
+})();
+
+section('calcMaxPan: different aspect ratios with fixed container');
+
+(function() {
+    // Fixed container: 1000x534
+    const containerW = 1000, containerH = 534;
+
+    // Tall image at 3x: 3000x2250
+    const mTall = calcMaxPan(3000, 2250, containerW, containerH);
+    assertClose('tall image maxPanX', mTall.x, 2000);
+    assertClose('tall image maxPanY', mTall.y, 1716);
+
+    // Wide image at 3x: 3000x1500
+    const mWide = calcMaxPan(3000, 1500, containerW, containerH);
+    assertClose('wide image maxPanX', mWide.x, 2000);
+    assertClose('wide image maxPanY', mWide.y, 966);
+
+    // Key: tall image allows more vertical panning
+    assert('tall image maxPanY > wide image maxPanY', mTall.y > mWide.y,
+        `tall=${mTall.y}, wide=${mWide.y}`);
+})();
+
+(function() {
+    // BUG REGRESSION: old code used containerHeight * 2 for ALL images
+    const containerW = 1000, containerH = 534;
+    const oldMaxPanY = containerH * 2; // 1068
+
+    // Tall image (AR 0.75): actual maxPanY should be 1716
+    const mTall = calcMaxPan(3000, 2250, containerW, containerH);
+    assert('REGRESSION: tall image maxPanY > old hardcoded value',
+        mTall.y > oldMaxPanY,
+        `actual=${mTall.y}, old=${oldMaxPanY}`);
+
+    // Wide image (AR 0.5): actual maxPanY should be 966
+    const mWide = calcMaxPan(3000, 1500, containerW, containerH);
+    assert('REGRESSION: wide image maxPanY < old hardcoded value',
+        mWide.y < oldMaxPanY,
+        `actual=${mWide.y}, old=${oldMaxPanY}`);
+})();
+
+// ========== Integration: center is within max pan bounds ==========
+
+section('Integration: center always within pan bounds');
+
+(function() {
+    const scenarios = [
+        { name: 'square',    iw: 3000, ih: 3000, cw: 1000, ch: 534 },
+        { name: 'landscape', iw: 3000, ih: 1500, cw: 1000, ch: 534 },
+        { name: 'portrait',  iw: 3000, ih: 2400, cw: 1000, ch: 534 },
+        { name: 'extreme wide', iw: 3000, ih: 900, cw: 1000, ch: 534 },
+        { name: 'extreme tall', iw: 3000, ih: 4000, cw: 1000, ch: 534 },
+    ];
+
+    scenarios.forEach(s => {
+        const center = calcCenter(s.iw, s.ih, s.cw, s.ch);
+        const maxPan = calcMaxPan(s.iw, s.ih, s.cw, s.ch);
+
+        assert(`${s.name}: center.x >= 0`, center.x >= 0, `center.x=${center.x}`);
+        assert(`${s.name}: center.y >= 0`, center.y >= 0 || s.ih < s.ch,
+            `center.y=${center.y} (image shorter than container is ok)`);
+        assert(`${s.name}: center.x <= maxPan.x`, center.x <= maxPan.x,
+            `center.x=${center.x}, max=${maxPan.x}`);
+        assert(`${s.name}: center.y <= maxPan.y`, center.y <= maxPan.y || s.ih < s.ch,
+            `center.y=${center.y}, max=${maxPan.y}`);
+    });
+})();
+
+// ========== Custom Position Calculation tests ==========
+
+section('Custom Position: percentage to pixel conversion');
+
+// Helper to convert percentage position to pixels
+function convertCustomPosition(customPosition, imageWidth, imageHeight, containerWidth, containerHeight) {
+    const maxPan = calcMaxPan(imageWidth, imageHeight, containerWidth, containerHeight);
+    return {
+        x: (customPosition.x / 100) * maxPan.x,
+        y: (customPosition.y / 100) * maxPan.y
+    };
+}
+
+(function() {
+    // Test center position (50%, 50%)
+    const pos = convertCustomPosition({ x: 50, y: 50 }, 3000, 2000, 1000, 667);
+    const center = calcCenter(3000, 2000, 1000, 667);
+    assertClose('50%,50% equals center x', pos.x, center.x, 1);
+    assertClose('50%,50% equals center y', pos.y, center.y, 1);
+})();
+
+(function() {
+    // Test top-left corner (0%, 0%)
+    const pos = convertCustomPosition({ x: 0, y: 0 }, 3000, 2000, 1000, 667);
+    assertClose('0%,0% -> x = 0', pos.x, 0);
+    assertClose('0%,0% -> y = 0', pos.y, 0);
+})();
+
+(function() {
+    // Test bottom-right corner (100%, 100%)
+    const pos = convertCustomPosition({ x: 100, y: 100 }, 3000, 2000, 1000, 667);
+    const maxPan = calcMaxPan(3000, 2000, 1000, 667);
+    assertClose('100%,100% -> x = maxPanX', pos.x, maxPan.x);
+    assertClose('100%,100% -> y = maxPanY', pos.y, maxPan.y);
+})();
+
+(function() {
+    // Test left-focused (25%, 50%)
+    const pos = convertCustomPosition({ x: 25, y: 50 }, 3000, 2000, 1000, 667);
+    const maxPan = calcMaxPan(3000, 2000, 1000, 667);
+    const center = calcCenter(3000, 2000, 1000, 667);
+    assertClose('25%,50% -> x = 25% of maxPan', pos.x, maxPan.x * 0.25);
+    assertClose('25%,50% -> y = center', pos.y, center.y, 1);
+})();
+
+section('Custom Position: bounds validation');
+
+(function() {
+    // Custom positions should always be within valid pan bounds
+    const scenarios = [
+        { name: 'center', x: 50, y: 50 },
+        { name: 'top-left', x: 0, y: 0 },
+        { name: 'top-right', x: 100, y: 0 },
+        { name: 'bottom-left', x: 0, y: 100 },
+        { name: 'bottom-right', x: 100, y: 100 },
+        { name: 'left-focus', x: 25, y: 50 },
+        { name: 'right-focus', x: 75, y: 50 },
+    ];
+
+    const imageWidth = 3000, imageHeight = 2400, containerWidth = 1000, containerHeight = 534;
+    const maxPan = calcMaxPan(imageWidth, imageHeight, containerWidth, containerHeight);
+
+    scenarios.forEach(s => {
+        const pos = convertCustomPosition({ x: s.x, y: s.y }, imageWidth, imageHeight, containerWidth, containerHeight);
+        assert(`${s.name}: x within bounds`, pos.x >= 0 && pos.x <= maxPan.x,
+            `pos.x=${pos.x}, maxPan.x=${maxPan.x}`);
+        assert(`${s.name}: y within bounds`, pos.y >= 0 && pos.y <= maxPan.y,
+            `pos.y=${pos.y}, maxPan.y=${maxPan.y}`);
+    });
+})();
+
+// ========== Summary ==========
+
+const summaryDiv = document.createElement('div');
+summaryDiv.className = 'summary ' + (failed === 0 ? 'all-pass' : 'has-fail');
+summaryDiv.textContent = `${passed + failed} tests: ${passed} passed, ${failed} failed`;
+results.appendChild(summaryDiv);
+</script>
+</body>
+</html>
