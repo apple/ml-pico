@@ -1,6 +1,6 @@
 # What Matters in Practical Learned Image Compression
 
-This repository accompanies the research paper [**"What Matters in Practical Learned Image Compression"**](#) (arXiv link to be added when published).
+This repository accompanies the research paper [**"What Matters in Practical Learned Image Compression"**](https://arxiv.org/abs/2605.05148).
 
 **Authors:** Kedar Tatwawadi, Parisa Rahimzadeh, Zhanghao Sun, Zhiqi Chen, Ziyun Yang, Sanjay Nair, Divija Hasteer, Oren Rippel
 
@@ -20,7 +20,7 @@ The above figure shows comparisons of state-of-the-art traditional and learned c
 
 ## Interactive Viewer
 
-Visit our [project page](https://apple.github.io/ml-perceptual-3dgs/) for an interactive tool that allows you to compare PICO to other codecs side-by-side.
+Visit our [project page](https://apple.github.io/ml-pico/) for an interactive tool that allows you to compare PICO to other codecs side-by-side.
 
 ---
 
