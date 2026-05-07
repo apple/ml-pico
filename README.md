@@ -46,7 +46,7 @@ If you find our work useful, please cite:
 @article{tatwawadi2026pico,
   title={What Matters in Practical Learned Image Compression},
   author={Tatwawadi, Kedar and Rahimzadeh, Parisa and Sun, Zhanghao and Chen, Zhiqi and Yang, Ziyun and Nair, Sanjay and Hasteer, Divija and Rippel, Oren},
-  journal={arXiv preprint arXiv:XXXX.XXXXX},
+  journal={arXiv preprint arXiv:2605.05148},
   year={2026}
 }
 ```
